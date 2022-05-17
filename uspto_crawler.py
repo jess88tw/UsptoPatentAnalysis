@@ -1,9 +1,10 @@
 #-----------------------------------------------------------------------------
-#  import
+#   import
 #-----------------------------------------------------------------------------
 #  自己的模組
 import is_folder
 import line_notify_token
+import clean_data as cd
 #  其他的模組
 from selenium import webdriver
 import bs4
@@ -14,12 +15,12 @@ import re
 import queue
 import pandas
 #-----------------------------------------------------------------------------
-#  filepath
+#   ilepath
 #-----------------------------------------------------------------------------
 file_path = input('Please input filepath(EN):')
 is_folder.is_folder_exist(file_path)
 #-----------------------------------------------------------------------------
-#  chrome driver
+#   chrome driver
 #-----------------------------------------------------------------------------
 driver_path = file_path + '/webdriver/chromedriver_0'
 driver = webdriver.Chrome(driver_path)
@@ -101,43 +102,43 @@ def spider_job(thread_number, thread_page):
             def match_xpath(abstract, detail, priorPublication_detail, related_us, foreignApplicationPriority, referencesCited_us_documents, referencesCited_foreign_documents):
                 #  專利簡介
                 if abstract == '0':
-                    patent_abstract_thread = 'NONE'
+                    patent_abstract_thread = 'NULL'
                 else:
                     patent_abstract_thread = driver_thread.find_element_by_xpath('/html/body/p[' + abstract + ']').text
                 patent_abstract_list_thread.append(patent_abstract_thread)
                 #  專利詳細內容區塊
                 if detail == '0':
-                    patent_detail_thread = 'NONE'
+                    patent_detail_thread = 'NULL'
                 else:
                     patent_detail_thread = driver_thread.find_element_by_xpath('/html/body/table[' + detail + ']').text
                 patent_detail_list_thread.append(patent_detail_thread)
                 #  先期公開資料，包含編號及日期
                 if priorPublication_detail == '0':
-                    patent_priorPublication_detail_thread = 'NONE'
+                    patent_priorPublication_detail_thread = 'NULL'
                 else:
                     patent_priorPublication_detail_thread = driver_thread.find_element_by_xpath('/html/body/table[' + priorPublication_detail + ']').text
                 patent_priorPublication_detail_list_thread.append(patent_priorPublication_detail_thread)
                 # 專利母案的相關資料
                 if related_us == '0':
-                    patent_related_us_thread = 'NONE'
+                    patent_related_us_thread = 'NULL'
                 else:
                     patent_related_us_thread = driver_thread.find_element_by_xpath('/html/body/table[' + related_us + ']').text
                 patent_related_us_list_thread.append(patent_related_us_thread)
                 #  國外專利申請相關資料
                 if foreignApplicationPriority == '0':
-                    patent_foreignApplicationPriority_thread = 'NONE'
+                    patent_foreignApplicationPriority_thread = 'NULL'
                 else:
                     patent_foreignApplicationPriority_thread = driver_thread.find_element_by_xpath('/html/body/table[' + foreignApplicationPriority + ']').text
                 patent_foreignApplicationPriority_list_thread.append(patent_foreignApplicationPriority_thread)
                 # 引用誰 US
                 if referencesCited_us_documents == '0':
-                    patent_referencesCited_us_documents_thread = 'NONE'
+                    patent_referencesCited_us_documents_thread = 'NULL'
                 else:
                     patent_referencesCited_us_documents_thread = driver_thread.find_element_by_xpath('/html/body/table[' + referencesCited_us_documents + ']').text
                 patent_referencesCited_us_documents_list_thread.append(patent_referencesCited_us_documents_thread)
                 # 引用誰 US以外
                 if referencesCited_foreign_documents == '0':
-                    patent_referencesCited_foreign_documents_thread = 'NONE'
+                    patent_referencesCited_foreign_documents_thread = 'NULL'
                 else:
                     patent_referencesCited_foreign_documents_thread = driver_thread.find_element_by_xpath('/html/body/table[' + referencesCited_foreign_documents + ']').text
                 patent_referencesCited_foreign_documents_list_thread.append(patent_referencesCited_foreign_documents_thread)
@@ -331,7 +332,7 @@ def spider_job(thread_number, thread_page):
     q.put(combined_list_thread)
     driver_thread.quit()
 #-----------------------------------------------------------------------------
-#  threading
+#   threading
 #-----------------------------------------------------------------------------
 # 小於 4 頁部分線程
 if patent_page_amount < 4:
@@ -398,38 +399,32 @@ combined_list_2 = q.get()
 combined_list_3 = q.get()
 combined_list_4 = q.get()
 #-----------------------------------------------------------------------------
-#  cleaning data
+#   cleaning data
 #-----------------------------------------------------------------------------
 #  專利編號作為 dataframe 的 index
 patent_index_list = combined_list_1[0] + combined_list_2[0] + combined_list_3[0] + combined_list_4[0]
 #  該專利有多人團隊或是單人
 patent_etAl_list = combined_list_1[1] + combined_list_2[1] + combined_list_3[1] + combined_list_4[1]
 etAl = []  #  團隊
-n_etAl = []  #  單人
+is_etAl = []  #  單人
 for i in patent_etAl_list:
     if ' ,   et al.' in i:
         etAl.append(i.replace(' ,   et al.', ''))
-        n_etAl.append('NONE')
+        is_etAl.append(1)
     else:
-        etAl.append('NONE')
-        n_etAl.append(i)
+        etAl.append(i)
+        is_etAl.append(0)
 #  重組 yyyy-mm-dd replace
 patent_date_list = combined_list_1[2] + combined_list_2[2] + combined_list_3[2] + combined_list_4[2]
-dic_month = {
-    'January': '01', 'February': '02', 'March': '03', 'April': '04', 'May': '05', 'June': '06', 'July': '07', 'August': '08', 'September': '09', 'October': '10', 'November': '11', 'December': '12'
-    }
-dic_month_2 = {
-    'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
-    }
 full_date = []  #  符合格式 YYYY-MM-DD
 year_date = []  #  只有年份
 for i in patent_date_list:
-    for i_2 in dic_month:
+    for i_2 in cd.dic_month:
         if i_2 in i :
             if i[-8] != ' ':
-                full_date.append(i[-4:-1] + i[-1] + '-' + dic_month[i_2] + '-' + i[-8] + i[-7])
+                full_date.append(i[-4:-1] + i[-1] + '-' + cd.dic_month[i_2] + '-' + i[-8] + i[-7])
             else:
-                full_date.append(i[-4:-1] + i[-1] + '-' + dic_month[i_2] + '-0' + i[-7])
+                full_date.append(i[-4:-1] + i[-1] + '-' + cd.dic_month[i_2] + '-0' + i[-7])
     year_date.append(i[-4:-1] + i[-1])
 #  標題
 patent_title_list = combined_list_1[3] + combined_list_2[3] + combined_list_3[3] + combined_list_4[3]
@@ -437,62 +432,6 @@ patent_title_list = combined_list_1[3] + combined_list_2[3] + combined_list_3[3]
 patent_abstract_list = combined_list_1[4] + combined_list_2[4] + combined_list_3[4] + combined_list_4[4]
 #  分割成多項 Inventors Family_ID Appl_No Filed PCT_Filed PCT_No 371Date PCT_Pub_No PCT_Pub_Date Applicant Assignee
 patent_detail_list = combined_list_1[5] + combined_list_2[5] + combined_list_3[5] + combined_list_4[5]
-def normalization_date(list_need_to_normalization):  #  用來正規化日期
-    temp_list = []
-    for i in list_need_to_normalization:
-        if i == 'NONE':
-            temp_list.append('NONE')
-        else:
-            for i_2 in dic_month:
-                if i_2 in i :
-                    if i[-8] != ' ':
-                        temp_list.append(i[-4:-1] + i[-1] + '-' + dic_month[i_2] + '-' + i[-8] + i[-7])
-                    else:
-                        temp_list.append(i[-4:-1] + i[-1] + '-' + dic_month[i_2] + '-0' + i[-7])
-    return temp_list
-def normalization_date_2(list_need_to_normalization):  #  有的月份是簡寫
-    temp_list = []
-    for i in list_need_to_normalization:
-        if i == 'NONE':
-            temp_list.append('NONE')
-        else:
-            for i_2 in dic_month_2:
-                if i_2 in i :
-                    if i[-8] != ' ':
-                        temp_list.append(i[-4:-1] + i[-1] + '-' + dic_month_2[i_2] + '-' + i[-8] + i[-7])
-                    else:
-                        temp_list.append(i[-4:-1] + i[-1] + '-' + dic_month_2[i_2] + '-0' + i[-7])
-    return temp_list
-def normalization_month(list_need_to_normalization):
-    temp_list = []
-    for i in list_need_to_normalization:
-        if i != 'NONE':
-            temp_list_2 = []
-            for i_2 in i:
-                temp_list_2.append(dic_month[i_2])
-            temp_list.append(temp_list_2)
-        else:
-            temp_list.append('NONE')
-    return temp_list
-def normalization_month_2(list_need_to_normalization):
-    temp_list = []
-    for i in list_need_to_normalization:
-        if i != 'NONE':
-            temp_list_2 = []
-            for i_2 in i:
-                temp_list_2.append(dic_month_2[i_2])
-            temp_list.append(temp_list_2)
-        else:
-            temp_list.append('NONE')
-    return temp_list
-def list_to_list(big_list, small_list, regex,  words_need_to_delete):  #  用來切片 list
-    for i in big_list:
-        m = re.findall(regex, i)
-        if m != []:
-            temp_m = m[0].replace(words_need_to_delete, '')
-            small_list.append(temp_m)
-        else:
-            small_list.append('NONE')
 inventors_list = []  #  ---> Inventors
 inventors_name_list = []
 inventors_city_list = []
@@ -504,23 +443,23 @@ for i in patent_detail_list:
         temp_m = m[0].replace('Inventors: ', '')  #  把小標題取代掉
         inventors_list.append(temp_m.replace('), ', ')@@@').split('@@@'))  #  建立 [['a', 'b', 'c'], ['d', 'e', 'f'], ...] @@@是切片符號
     else:
-        inventors_list.append('NONE')
+        inventors_list.append('NULL')
 for i in inventors_list:
-    if i != 'NONE':
+    if i != 'NULL':
         temp_list = []
         temp_list_2 = []
         temp_list_3 = []
         for i_2 in i:
-            temp_list.append(i_2.rsplit(' (', 1)[0])
-            temp_list_2.append(i_2.rsplit(', ', 1)[0].rsplit(' (', 1)[-1])
+            temp_list.append(i_2.rsplit(' (', 1)[0].title())
+            temp_list_2.append(i_2.rsplit(', ', 1)[0].rsplit(' (', 1)[-1].title())
             temp_list_3.append(i_2.rsplit(', ', 1)[-1].replace(')', ''))
         inventors_name_list.append(temp_list)
         inventors_city_list.append(temp_list_2)
         inventors_country_list.append(temp_list_3)
     else:
-        inventors_name_list.append('NONE')
-        inventors_city_list.append('NONE')
-        inventors_country_list.append('NONE')
+        inventors_name_list.append('NULL')
+        inventors_city_list.append('NULL')
+        inventors_country_list.append('NULL')
 family_id_list = []
 applNo_list = []
 filed_list = []
@@ -529,18 +468,18 @@ pctNo_list = []
 pct371_date_list = []  #  美國專利法第 371 條規範國際申請案 PCT 進入美國國家階段的程序
 pct_pubNo_list = []
 pct_pub_date_list = []
-list_to_list(patent_detail_list, family_id_list, r"Family ID:\s.+", 'Family ID: ')
-list_to_list(patent_detail_list, applNo_list, r"Appl\. No\.:\s.+", 'Appl. No.: ')
-list_to_list(patent_detail_list, filed_list, r"Filed:\s.+", 'Filed: ')
-filed_list = normalization_date(filed_list)
-list_to_list(patent_detail_list, pct_filed_list, r"PCT Filed:\s.+", 'PCT Filed: ')
-pct_filed_list = normalization_date(pct_filed_list)
-list_to_list(patent_detail_list, pctNo_list, r"PCT No\.:\s.+", 'PCT No.: ')
-list_to_list(patent_detail_list, pct371_date_list, r"371\(c\)\(1\),\(2\),\(4\) Date:\s.+", '371(c)(1),(2),(4) Date: ')
-pct371_date_list = normalization_date(pct371_date_list)
-list_to_list(patent_detail_list, pct_pubNo_list, r"PCT Pub\. No\.:\s.+", 'PCT Pub. No.: ')
-list_to_list(patent_detail_list, pct_pub_date_list, r"PCT Pub\. Date:\s.+", 'PCT Pub. Date: ')
-pct_pub_date_list = normalization_date(pct_pub_date_list)
+cd.list_to_list(patent_detail_list, family_id_list, r"Family ID:\s.+", 'Family ID: ')
+cd.list_to_list(patent_detail_list, applNo_list, r"Appl\. No\.:\s.+", 'Appl. No.: ')
+cd.list_to_list(patent_detail_list, filed_list, r"Filed:\s.+", 'Filed: ')
+filed_list = cd.normalization_date(filed_list)
+cd.list_to_list(patent_detail_list, pct_filed_list, r"PCT Filed:\s.+", 'PCT Filed: ')
+pct_filed_list = cd.normalization_date(pct_filed_list)
+cd.list_to_list(patent_detail_list, pctNo_list, r"PCT No\.:\s.+", 'PCT No.: ')
+cd.list_to_list(patent_detail_list, pct371_date_list, r"371\(c\)\(1\),\(2\),\(4\) Date:\s.+", '371(c)(1),(2),(4) Date: ')
+pct371_date_list = cd.normalization_date(pct371_date_list)
+cd.list_to_list(patent_detail_list, pct_pubNo_list, r"PCT Pub\. No\.:\s.+", 'PCT Pub. No.: ')
+cd.list_to_list(patent_detail_list, pct_pub_date_list, r"PCT Pub\. Date:\s.+", 'PCT Pub. Date: ')
+pct_pub_date_list = cd.normalization_date(pct_pub_date_list)
 applicant_list = []  #  ---> Applicant
 applicant_name_list = []
 applicant_city_list = []
@@ -553,19 +492,25 @@ for i in patent_detail_list:
         temp_m = (m.group().replace('Applicant:\nName City State Country Type\n\n', ''))[0:-1].split('\n')
         applicant_list.append(temp_m)
     else:
-        applicant_list.append('NONE')
+        applicant_list.append('NULL')
 for i in applicant_list:
-    if i != 'NONE':
+    if i != 'NULL':
         x = len(i)//4
-        applicant_name_list.append(i[ :x])
-        applicant_city_list.append(i[x:x*2])
+        temp_list = []
+        temp_list_2 = []
+        for i_2 in i[ :x]:
+            temp_list.append(i_2.replace('&', 'and').title().replace(',', ' ').replace('.', ' ').replace('-', ' ').replace('   ', '').replace('  ', ' '))
+        for i_3 in i[x:x*2]:
+            temp_list_2.append(i_3.title())
+        applicant_name_list.append(temp_list)
+        applicant_city_list.append(temp_list_2)
         applicant_state_list.append(i[x*2:x*3])
         applicant_country_list.append(i[x*3: ])
     else:
-        applicant_name_list.append('NONE')
-        applicant_city_list.append('NONE')
-        applicant_state_list.append('NONE')
-        applicant_country_list.append('NONE')
+        applicant_name_list.append('NULL')
+        applicant_city_list.append('NULL')
+        applicant_state_list.append('NULL')
+        applicant_country_list.append('NULL')
 assignee_list = []  #  ---> Assignee
 assignee_name_list = []
 assignee_city_list = []
@@ -577,33 +522,33 @@ for i in patent_detail_list:
         temp_m = (m.group().replace('Assignee: ', '')).split('\n')
         assignee_list.append(temp_m)
     else:
-        assignee_list.append('NONE')
+        assignee_list.append('NULL')
 for i in assignee_list:
-    if i != 'NONE':
+    if i != 'NULL':
         temp_list = []
         temp_list_2 = []
         temp_list_3 = []
         for i_2 in i:
-            temp_list.append(i_2.split(' (', 1)[0])
-            temp_list_2.append(i_2.rsplit(', ', 1)[0].rsplit('(', 1)[1])
+            temp_list.append(i_2.split(' (', 1)[0].replace('&', 'and').title().replace(',', ' ').replace('.', ' ').replace('-', ' ').replace('   ', '').replace('  ', ' '))
+            temp_list_2.append(i_2.rsplit(', ', 1)[0].rsplit('(', 1)[1].title())
             if 'N/A' not in i_2.split(' (', 1)[1]:
                 temp_list_3.append(i_2.split(' (', 1)[1][-3:-1])
             else:
-                temp_list_3.append('N/A')
+                temp_list_3.append('NULL')
         assignee_name_list.append(temp_list)
         assignee_city_list.append(temp_list_2)
         assignee_country_list.append(temp_list_3)
     else:
-        assignee_name_list.append('NONE')
-        assignee_city_list.append('NONE')
-        assignee_country_list.append('NONE')
+        assignee_name_list.append('NULL')
+        assignee_city_list.append('NULL')
+        assignee_country_list.append('NULL')
 #  Prior Publication
 patent_priorPublication_detail_list = combined_list_1[6] + combined_list_2[6] + combined_list_3[6] + combined_list_4[6]
 prior_name_list = []  #  先期公開資料，包含編號及日期。
 prior_date_list = []
-list_to_list(patent_priorPublication_detail_list, prior_name_list, r"[A-Z]{2} \d* [A-Z][0-9]", '')
-list_to_list(patent_priorPublication_detail_list, prior_date_list, r"[A-Z][a-z]{2} [0-9]+, [0-9]{4}", '')
-prior_date_list = normalization_date_2(prior_date_list)
+cd.list_to_list(patent_priorPublication_detail_list, prior_name_list, r"[A-Z]{2} \d* [A-Z][0-9]", '')
+cd.list_to_list(patent_priorPublication_detail_list, prior_date_list, r"[A-Z][a-z]{2} [0-9]+, [0-9]{4}", '')
+prior_date_list = cd.normalization_date_2(prior_date_list)
 #  不會用到的資料先不用節省空間
 patent_related_us_list = combined_list_1[7] + combined_list_2[7] + combined_list_3[7] + combined_list_4[7]
 #  不會用到的資料先不用節省空間
@@ -614,45 +559,36 @@ referencesCited_us_list = []
 referencesCited_us_month_list = []
 referencesCited_us_year_list = []
 referencesCited_us_name_list = []
+referencesCited_us_is_etAl_list = []
 for i in patent_referencesCited_us_documents_list:
-    if i != 'NONE':
+    if i != 'NULL':
         temp_list = []
         temp_list_2 = []
         temp_list_3 = []
         temp_list_4 = []
+        temp_list_5 = []
         for i_2 in i.split('\n'):
             temp_list.append(i_2.split(' ', 1)[0])
             temp_list_2.append(i_2.split(' ', 1)[1].split(' ', 2)[0])
             temp_list_3.append(i_2.split(' ', 1)[1].split(' ', 2)[1])
-            temp_list_4.append(i_2.split(' ', 1)[1].split(' ', 2)[2])
+            if ' et al.' in i_2:
+                temp_list_4.append(i_2.split(' ', 1)[1].split(' ', 2)[2].replace(' et al.', ''))
+                temp_list_5.append(1)
+            else:
+                temp_list_4.append(i_2.split(' ', 1)[1].split(' ', 2)[2])
+                temp_list_5.append(0)
         referencesCited_us_list.append(temp_list)
         referencesCited_us_month_list.append(temp_list_2)
         referencesCited_us_year_list.append(temp_list_3)
         referencesCited_us_name_list.append(temp_list_4)
+        referencesCited_us_is_etAl_list.append(temp_list_5)
     else:
-        referencesCited_us_list.append('NONE')
-        referencesCited_us_month_list.append('NONE')
-        referencesCited_us_year_list.append('NONE')
-        referencesCited_us_name_list.append('NONE')
-referencesCited_us_month_list = normalization_month(referencesCited_us_month_list)
-referencesCited_us_etAl_list = []
-referencesCited_us_n_etAl_list = []
-for i in referencesCited_us_name_list:
-    if i != 'NONE':
-        temp_list = []
-        temp_list_2 = []
-        for i_2 in i:
-            if 'et al.' in i_2:
-                temp_list.append(i_2)
-                temp_list_2.append('NONE')
-            else:
-                temp_list.append('NONE')
-                temp_list_2.append(i_2)
-        referencesCited_us_etAl_list.append(temp_list)
-        referencesCited_us_n_etAl_list.append(temp_list_2)
-    else:
-        referencesCited_us_etAl_list.append('NONE')
-        referencesCited_us_n_etAl_list.append('NONE')
+        referencesCited_us_list.append('NULL')
+        referencesCited_us_month_list.append('NULL')
+        referencesCited_us_year_list.append('NULL')
+        referencesCited_us_name_list.append('NULL')
+        referencesCited_us_is_etAl_list.append('NULL')
+referencesCited_us_month_list = cd.normalization_month(referencesCited_us_month_list)
 #  分割成多項 Id Month Year Database
 patent_referencesCited_foreign_documents_list = combined_list_1[10] + combined_list_2[10] + combined_list_3[10] + combined_list_4[10]
 referencesCited_f_list = []
@@ -660,13 +596,13 @@ referencesCited_f_month_list = []
 referencesCited_f_year_list = []
 referencesCited_f_dataBaseName_list = []
 for i in patent_referencesCited_foreign_documents_list:
-    if i != 'NONE':
+    if i != 'NULL':
         temp_list = []
         temp_list_2 = []
         temp_list_3 = []
         temp_list_4 = []
         for i_2 in i.split('\n'):
-            temp_list.append(i_2.rsplit(' ', 3)[0])
+            temp_list.append(i_2.rsplit(' ', 3)[0].replace(' ', '').replace('-', '').replace('/', '').replace('WO', ''))
             temp_list_2.append(i_2.split(' ')[-3])
             temp_list_3.append(i_2.split(' ')[-2])
             temp_list_4.append(i_2.split(' ')[-1])
@@ -675,11 +611,11 @@ for i in patent_referencesCited_foreign_documents_list:
         referencesCited_f_year_list.append(temp_list_3)
         referencesCited_f_dataBaseName_list.append(temp_list_4)
     else:
-        referencesCited_f_list.append('NONE')
-        referencesCited_f_month_list.append('NONE')
-        referencesCited_f_year_list.append('NONE')
-        referencesCited_f_dataBaseName_list.append('NONE')
-referencesCited_f_month_list = normalization_month_2(referencesCited_f_month_list)
+        referencesCited_f_list.append('NULL')
+        referencesCited_f_month_list.append('NULL')
+        referencesCited_f_year_list.append('NULL')
+        referencesCited_f_dataBaseName_list.append('NULL')
+referencesCited_f_month_list = cd.normalization_month_2(referencesCited_f_month_list)
 #  分割成多項 ipc class subclass scetion subgroup date
 patent_ipc_list = combined_list_1[11] + combined_list_2[11] + combined_list_3[11] + combined_list_4[11]
 ipc_list = []
@@ -689,7 +625,7 @@ ipc_subclass_list = []
 ipc_subgroup_list = []
 ipc_date_list = []
 for i in patent_ipc_list:
-    if i != 'NONE':
+    if i != 'NULL':
         temp_list = []
         temp_list_2 = []
         temp_list_3 = []
@@ -704,19 +640,19 @@ for i in patent_ipc_list:
             if '()' not in i_2:
                 temp_list_5.append(i_2.rsplit(' ', 1)[1].replace('(', '').replace(')', '')[:4] + '-' + i_2.rsplit(' ', 1)[1].replace('(', '').replace(')', '')[4:6] + '-' + i_2.rsplit(' ', 1)[1].replace('(', '').replace(')', '')[6:8])
             else:
-                temp_list_5.append('N/A')
+                temp_list_5.append('NULL')
         ipc_section_list.append(temp_list)
         ipc_class_list.append(temp_list_2)
         ipc_subclass_list.append(temp_list_3)
         ipc_subgroup_list.append(temp_list_4)
         ipc_date_list.append(temp_list_5)
     else:
-        ipc_list.append('NONE')
-        ipc_section_list.append('NONE')
-        ipc_class_list.append('NONE')
-        ipc_subclass_list.append('NONE')
-        ipc_subgroup_list.append('NONE')
-        ipc_date_list.append('NONE')
+        ipc_list.append('NULL')
+        ipc_section_list.append('NULL')
+        ipc_class_list.append('NULL')
+        ipc_subclass_list.append('NULL')
+        ipc_subgroup_list.append('NULL')
+        ipc_date_list.append('NULL')
 #  錯誤發生在
 patent_err_list_thread = combined_list_1[12] + combined_list_2[12] + combined_list_3[12] + combined_list_4[12]
 if len(patent_err_list_thread) < 1:
@@ -725,38 +661,13 @@ else:
     print('Error at: ')
     print(patent_err_list_thread)
 #-----------------------------------------------------------------------------
-#  data frame
+#   data frame
 #-----------------------------------------------------------------------------
-#  客製index
-def un_zip_index_list(aim_list, index_list_need_to_unzip):
-    temp_list = []
-    num = 0
-    for i in aim_list:
-        if i != 'NONE':
-            num_2 = 0
-            while num_2 < len(i):
-                temp_list.append(index_list_need_to_unzip[num])
-                num_2 += 1
-            num +=  1
-        else:
-            temp_list.append(index_list_need_to_unzip[num])
-            num +=  1
-    return temp_list
-#  [[],[],[],....[]] ---> []
-def un_zip_list(list_need_to_unzip):
-    temp_list = []
-    for i in list_need_to_unzip:
-        if i != 'NONE':
-            for i_2 in i:
-                temp_list.append(i_2)
-        else:
-            temp_list.append(i)
-    return temp_list
 detail_data = pandas.DataFrame({
     'Title' : patent_title_list,
     'Abstract' : patent_abstract_list,
     'et al.' : etAl,
-    'n_et al.' : n_etAl,
+    'Team et al.?' : is_etAl,
     'Date' : full_date,
     'Year' : year_date,
     'Family ID' : family_id_list,
@@ -771,41 +682,43 @@ detail_data = pandas.DataFrame({
     'Prior Publication Data Date' : prior_date_list
 }, index = patent_index_list)
 inventors_data = pandas.DataFrame({
-    'Inventors Name' : un_zip_list(inventors_name_list),
-    'Inventors City' : un_zip_list(inventors_city_list),
-    'Inventors Country' : un_zip_list(inventors_country_list)
-}, index =  un_zip_index_list(inventors_name_list, patent_index_list))
+    'Inventors Name' : cd.un_zip_list(inventors_name_list),
+    'Inventors City' : cd.un_zip_list(inventors_city_list),
+    'Inventors State' : cd.normalization_country(inventors_city_list, inventors_country_list)[1],
+    'Inventors Country' : cd.normalization_country(inventors_city_list, inventors_country_list)[0]
+}, index =  cd.un_zip_index_list(inventors_name_list, patent_index_list))
 applicant_data = pandas.DataFrame({
-    'Applicant Name' : un_zip_list(applicant_name_list),
-    'Applicant City' : un_zip_list(applicant_city_list),
-    'Applicant State' : un_zip_list(applicant_state_list),
-    'Applicant Country' : un_zip_list(applicant_country_list)
-}, index =  un_zip_index_list(applicant_name_list, patent_index_list))
+    'Applicant Name' : cd.un_zip_list(applicant_name_list),
+    'Applicant City' : cd.un_zip_list(applicant_city_list),
+    'Applicant State' : cd.un_zip_list(applicant_state_list),
+    'Applicant Country' : cd.un_zip_list(applicant_country_list)
+}, index =  cd.un_zip_index_list(applicant_name_list, patent_index_list))
 assignee_data = pandas.DataFrame({
-    'Assignee Name' : un_zip_list(assignee_name_list),
-    'Assignee City' : un_zip_list(assignee_city_list),
-    'Assignee Country' : un_zip_list(assignee_country_list)
-}, index =  un_zip_index_list(assignee_name_list, patent_index_list))
+    'Assignee Name' : cd.un_zip_list(assignee_name_list),
+    'Assignee City' : cd.un_zip_list(assignee_city_list),
+    'Assignee State' : cd.normalization_country(assignee_city_list, assignee_country_list)[1],
+    'Assignee Country' : cd.normalization_country(assignee_city_list, assignee_country_list)[0]
+}, index =  cd.un_zip_index_list(assignee_name_list, patent_index_list))
 referencesCited_us_data = pandas.DataFrame({
-    'References Cited U.S. Patent' : un_zip_list(referencesCited_us_list),
-    'References Cited U.S. Month' : un_zip_list(referencesCited_us_month_list),
-    'References Cited U.S.Year' : un_zip_list(referencesCited_us_year_list),
-    'References Cited U.S. et al.' : un_zip_list(referencesCited_us_etAl_list),
-    'References Cited U.S. n_et al' : un_zip_list(referencesCited_us_n_etAl_list)
-}, index =  un_zip_index_list(referencesCited_us_list, patent_index_list))
+    'References Cited U.S. Patent' : cd.un_zip_list(referencesCited_us_list),
+    'References Cited U.S. Month' : cd.un_zip_list(referencesCited_us_month_list),
+    'References Cited U.S.Year' : cd.un_zip_list(referencesCited_us_year_list),
+    'References Cited U.S. et al.' : cd.un_zip_list(referencesCited_us_name_list),
+    'Team et al.?' : cd.un_zip_list(referencesCited_us_is_etAl_list)
+}, index =  cd.un_zip_index_list(referencesCited_us_list, patent_index_list))
 referencesCited_f_data = pandas.DataFrame({
-    'References Cited Foreign Patent' : un_zip_list(referencesCited_f_list),
-    'References Cited Foreign Month' : un_zip_list(referencesCited_f_month_list),
-    'References Cited Foreign Year' : un_zip_list(referencesCited_f_year_list),
-    'References Cited Foreign DB' : un_zip_list(referencesCited_f_dataBaseName_list)
-}, index =  un_zip_index_list(referencesCited_f_list, patent_index_list))
+    'References Cited Foreign Patent' : cd.un_zip_list(referencesCited_f_list),
+    'References Cited Foreign Month' : cd.un_zip_list(referencesCited_f_month_list),
+    'References Cited Foreign Year' : cd.un_zip_list(referencesCited_f_year_list),
+    'References Cited Foreign DB' : cd.un_zip_list(referencesCited_f_dataBaseName_list)
+}, index =  cd.un_zip_index_list(referencesCited_f_list, patent_index_list))
 ipc_data = pandas.DataFrame({
-    'IPC Section' : un_zip_list(ipc_section_list),
-    'IPC Class' : un_zip_list(ipc_class_list),
-    'IPC Subclass' : un_zip_list(ipc_subclass_list),
-    'IPC Subgroup' : un_zip_list(ipc_subgroup_list),
-    'IPC Date' : un_zip_list(ipc_date_list)
-}, index =  un_zip_index_list(ipc_section_list, patent_index_list))
+    'IPC Subclass' : cd.un_zip_list(ipc_subclass_list),
+    'IPC Subgroup' : cd.un_zip_list(ipc_subgroup_list),
+    'IPC Date' : cd.un_zip_list(ipc_date_list),
+    'IPC Class' : cd.un_zip_list(ipc_class_list),
+    'IPC Section' : cd.un_zip_list(ipc_section_list)
+}, index =  cd.un_zip_index_list(ipc_section_list, patent_index_list))
 #  記得先安裝 openpyxl
 with pandas.ExcelWriter(file_path + '/uspto_data/data.xlsx', engine = 'openpyxl') as writer:
     detail_data.to_excel(writer, sheet_name = 'Detail')
