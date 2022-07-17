@@ -84,7 +84,7 @@ def spider_job(thread_number, thread_page):
                     break
             #  找到專利號碼作為 index
             patent_index_thread = driver_thread.find_element_by_xpath('/html/body/table[2]/tbody/tr[1]/td[2]').text
-            patent_index_list_thread.append(patent_index_thread)
+            patent_index_list_thread.append(patent_index_thread.replace(',', ''))
             #  找到作者
             patent_etAl_thread = driver_thread.find_element_by_xpath('/html/body/table[2]/tbody/tr[2]/td[1]').text
             patent_etAl_list_thread.append(patent_etAl_thread)
